@@ -47,13 +47,16 @@ while True:
     surf2.blit(im.subsurface((0, 0, width/2, height)), (0,0))
 
     # update surf0
-    surf0.blit(pygame.transform.scale(surf1, (100, 200)), (0,0))
+    surf0.fill((255,255,255))
+    surf0.blit(pygame.transform.scale(surf1, (200, 200)), (0,0))
     surf0.blit(surf2, (width/2,0))
 
     screen.fill((0,0,0))
     screen.blit(surf0, (0, 0))
 
     pygame.display.flip()
+
+pygame.image.save(surf0, "surf0.png")
 
 pygame.display.quit()
 del cam
