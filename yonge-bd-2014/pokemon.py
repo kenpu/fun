@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import cv
 import pygame
 import sys
@@ -8,8 +10,11 @@ import subprocess
 #
 # Initialize CV
 #
-cam = cv.CaptureFromCAM(0)
+C = dict()
+
+C["cam"] = cv.CaptureFromCAM(0)
 def next_pg_image():
+    cam = C["cam"]
     cv_im = cv.QueryFrame(cam)
     depth = cv_im.depth
     s = cv.GetSize(cv_im)
@@ -34,12 +39,12 @@ pygame.init()
 size = width, height = 1024, 600
 screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 
-_quit = False
-
 # load image files
 
-image_files = [f for f in os.listdir(".") if f.endswith(".png")]
-image_files.extend(f for f in os.listdir(".") if f.endswith(".jpg"))
+top = sys.argv[1] if sys.argv[1:] else "."
+
+image_files = ["%s/%s" % (top,f) for f in os.listdir(top) if f.endswith(".png")]
+image_files.extend("%s/%s" % (top, f) for f in os.listdir(top) if f.endswith(".jpg"))
 image_files.sort()
 
 if not image_files:
@@ -74,17 +79,37 @@ face_surf  = pygame.Surface((face_width, face_height))
 # Merged face + card
 merge_surf = pygame.Surface((card_width, card_height))
 
-def print_image():
+def printer_ready():
+  output = subprocess.check_output(["lpq"])
+  if "no entries" in output:
+    return True
+  else:
+    return False
+
+def print_image(capture):
   try:
-    filename = "output/%s.png" % str(time())
+    t = str(time())
+    filename = "output/%s.png" % t
+    facename = "output/face-%s.png" % t
+    pygame.image.save(capture, facename)
     pygame.image.save(merge_surf, filename)
     print "image saved:", filename
-    subprocess.call(["/usr/bin/lp", "-o", "scaling=60", filename])
-    sleep(30.0)
+    if printer_ready():
+      del C["cam"]
+      print ">>>>>>> printer"
+      subprocess.call(["/usr/bin/lp", "-o", "scaling=60", filename])
+      sleep(10.0)
+      C["cam"] = cv.CaptureFromCAM(0)
+    else:
+      print "printer not ready"
   except Exception, e:
     print e
 
 
+_quit = False
+_merge = True
+
+capture = next_pg_image()
 while True:
     for e in pygame.event.get():
         if e.type is pygame.QUIT:
@@ -92,11 +117,16 @@ while True:
         if e.type is pygame.KEYDOWN:
           if e.key == pygame.K_ESCAPE:
             _quit = True
-          if e.key == pygame.K_SPACE or e.key == pygame.K_PAGEUP:
+          elif e.key == pygame.K_PAGEUP:
+            _merge = not _merge
+          elif e.key == pygame.K_PAGEDOWN:
+            print_image(capture)
+          elif e.key == pygame.K_LEFT:
+            image_idx = (image_idx - 1) % len(image_files)
+            card_surf = load_card(image_idx)
+          else:
             image_idx = (image_idx + 1) % len(image_files)
             card_surf = load_card(image_idx)
-          if e.key == pygame.K_PAGEDOWN:
-            print_image()
 
 
     if _quit: break
@@ -117,8 +147,9 @@ while True:
     # update the card_background
     merge_surf.fill((255,255,255))
     center(merge_surf, card_surf)
-    center(merge_surf, face_surf, None, 
-        card_height - face_height - 10)
+
+    if _merge:
+      center(merge_surf, face_surf, None, card_height - face_height - 10)
 
     screen.fill((255, 255, 255))
     center(screen, merge_surf)
@@ -129,4 +160,4 @@ while True:
 
 
 pygame.display.quit()
-del cam
+del C["cam"]
