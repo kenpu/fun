@@ -115,15 +115,20 @@ while True:
         if e.type is pygame.QUIT:
             _quit = True
         if e.type is pygame.KEYDOWN:
+
           if e.key == pygame.K_ESCAPE:
             _quit = True
-          elif e.key == pygame.K_PAGEUP:
+
+          elif e.key == pygame.K_SPACE:
             _merge = not _merge
+
           elif e.key == pygame.K_PAGEDOWN:
             print_image(capture)
+
           elif e.key == pygame.K_LEFT:
             image_idx = (image_idx - 1) % len(image_files)
             card_surf = load_card(image_idx)
+
           else:
             image_idx = (image_idx + 1) % len(image_files)
             card_surf = load_card(image_idx)
@@ -158,6 +163,6 @@ while True:
 
 
 
-
+subprocess.call(["lprm", "-"])
 pygame.display.quit()
 del C["cam"]
